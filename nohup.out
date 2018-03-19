@@ -1,0 +1,7 @@
+/usr/lib64/R/bin/BATCH: line 60: 40833 Terminated              ${R_HOME}/bin/R -f ${in} ${opts} ${R_BATCH_OPTIONS} > ${out} 2>&1
+/usr/lib64/R/bin/BATCH: line 60: 38568 Terminated              ${R_HOME}/bin/R -f ${in} ${opts} ${R_BATCH_OPTIONS} > ${out} 2>&1
+/usr/lib64/R/bin/BATCH: line 60: 39248 Terminated              ${R_HOME}/bin/R -f ${in} ${opts} ${R_BATCH_OPTIONS} > ${out} 2>&1
+/usr/lib64/R/bin/BATCH: line 60: 51402 Terminated              ${R_HOME}/bin/R -f ${in} ${opts} ${R_BATCH_OPTIONS} > ${out} 2>&1
+/usr/lib64/R/bin/BATCH: line 60: 51453 Terminated              ${R_HOME}/bin/R -f ${in} ${opts} ${R_BATCH_OPTIONS} > ${out} 2>&1
+/usr/lib64/R/bin/Rcmd: line 62: exec: BATCXH: not found
+/usr/lib64/R/bin/BATCH: line 60: 117966 Terminated              ${R_HOME}/bin/R -f ${in} ${opts} ${R_BATCH_OPTIONS} > ${out} 2>&1
