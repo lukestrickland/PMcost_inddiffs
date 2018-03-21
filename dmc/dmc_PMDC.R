@@ -1811,7 +1811,7 @@ get.msds <- function(samples) {
   SD <- apply(avg_samples, 2, sd)
   out <- cbind(M,SD)
   colnames(out) <- c("M", "SD")
-  out
+  data.frame(out)
 }
 
 
