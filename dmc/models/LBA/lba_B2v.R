@@ -1,4 +1,4 @@
-# Template setup for n-choice LBA, B=b-A parameterization with extra seperate mean_v1 
+# Template setup for n-choice LBA, B=b-A parameterization with seperate mean_v_false
 #   External parameters types: A, B, t0, mean_v, mean_v_false, sd_v, st0 = 0 (optional)
 #   Internal parameters types: A, b, t0, mean_v, sd_v, st0 = 0 (optional)
 
@@ -10,7 +10,7 @@ transform.dmc <- function(par.df)
   par.df$b <- par.df$B+par.df$A
   
   # Replace mismatch in mean_v (set to Inf as a constant) with mean_v_false
-  par.df$mean_v[par.df[,"mean_v"]==Inf] <- par.df[1,"mean_v1"]
+  par.df$mean_v[par.df[,"mean_v"]==Inf] <- par.df[1,"mean_v_false"]
   
   par.df[,c("A","b","t0","mean_v","sd_v","st0")]
 }

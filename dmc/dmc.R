@@ -12,8 +12,8 @@ require(statmod) # Wald model
 require(pracma)  # For gng and stop signal robust integration
 require(numDeriv) # Prior transformations
 require(vioplot) # Stop signal graphs
-if(try(require(ggplot2))) require(ggplot2) else cat(
-'No ggplot2, ggplot.RP.dmc and ggplot.RT.dmc will not work')  #Extra plots
+require(ggplot2)
+require(gridExtra)
 
 # Pull in the file utilities so load_model can be called from dmc_hierarchical 
 temp_wd <- getwd (); setwd(file.path (temp_wd, "dmc")) 
@@ -26,6 +26,7 @@ source ("dmc_sampling.R")
 source ("dmc_hierarchical.R")
 source ("dmc_plotting.R")
 source ("dmc_analysis.R")
+source ("dmc_PMDC.R")
 
 setwd(temp_wd)
 

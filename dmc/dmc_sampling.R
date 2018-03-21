@@ -41,20 +41,6 @@ rlnorm_l <- function(n,meanlog,sdlog,lower)
   lower + rlnorm(n,meanlog,sdlog)    
 }
 
-
-dcauchy <- function(x,location,scale,log=FALSE) 
-  # Used with cauchy prior
-{
-  dcauchy(x,location,scale,log=log)  
-}
-
-rcauchy <- function(n,location,scale) 
-  # Used with cauchy prior
-{
-  rcauchy(n,location,scale)    
-}
-
-
 dconstant <- function(x,constant,log=FALSE)
   # Used with constant prior
 {
@@ -75,7 +61,7 @@ prior.p.dmc <- function(p1,p2,
                         upper=rep(NA,length(p1)),
                         dists=rep("tnorm",length(p1)),
                         untrans=rep("identity",length(p1)),
-                        dist.types=c("tnorm","beta","gamma","lnorm","cauchy","constant")
+                        dist.types=c("tnorm","beta","gamma","lnorm","constant")
 )
   # Makes a list of prior distribution parameters.
 {
@@ -140,12 +126,6 @@ prior.p.dmc <- function(p1,p2,
                            attr(p,"dist") <- "lnorm_l"
                            p
                          },
-                         cauchy={
-                           names(p) <- c("location","scale")
-                           p <- as.list(p)
-                           attr(p,"dist") <- "cauchy"
-                           p
-                         },
                          {
                            p <- p1[i]
                            names(p) <- c("constant")
@@ -162,9 +142,6 @@ prior.p.dmc <- function(p1,p2,
   }
   prior
 }
-
-
-
 
 
 log.prior.dmc=function(p.vector,p.prior)
@@ -229,17 +206,16 @@ assign.pp <- function(pp,p.prior)
 }
 
 
-
 ######### Sampling ----
 
 # thin=1;samples=NULL;theta1=NULL
 # restart=TRUE;add=FALSE;remove=NA;start.from=NA
-# start.prior=NULL;rp=.001;verbose=TRUE; replace.bad.chains=NULL
+# start.prior=NULL;rp=.001;verbose=TRUE 
 # n.chains=length(attr(attr(data,"model"),"p.vector"))*3
 
 samples.dmc <- function(nmc,p.prior=NULL,data=NULL,thin=1,samples=NULL,theta1=NULL,
                         restart=TRUE,add=FALSE,remove=NA,start.from=NA,
-                        start.prior=NULL,rp=.001,verbose=TRUE,replace.bad.chains=NULL, 
+                        start.prior=NULL,rp=.001,verbose=TRUE, 
                         n.chains=length(attr(attr(data,"model"),"p.vector"))*3)
   # Setup for sampling  
 {
@@ -363,28 +339,16 @@ samples.dmc <- function(nmc,p.prior=NULL,data=NULL,thin=1,samples=NULL,theta1=NU
         old.nmc <- start.from
       }
       theta1 <- samples$theta[,,old.nmc]
-      summed_log_prior1 <- samples$summed_log_prior[old.nmc,]
-      log_likelihoods1  <- samples$log_likelihoods[old.nmc,]
-     
-      if (!is.null(replace.bad.chains)) {
-        if (!all(replace.bad.chains %in% 1:samples$n.chains))
-          stop(paste("replace.bad.chains must be in the range 1 to",samples$n.chains))
-        good.chains <- c(1:samples$n.chains)[-replace.bad.chains]
-        if (length(good.chains)<2)
-          stop("Must be at least two good chains")
-        good.chains <- sample(good.chains,length(replace.bad.chains))
-        theta1[replace.bad.chains,] <- theta1[good.chains,] 
-        summed_log_prior1[replace.bad.chains] <- summed_log_prior1[good.chains]
-        log_likelihoods1[replace.bad.chains] <- log_likelihoods1[good.chains]
-      }
-  
+      
       samples$theta=array(NA,c(samples$n.chains,samples$n.pars,nmc))
       dimnames(samples$theta)[[2]] <- samples$p.names
       samples$theta[,,1] <- theta1
       
+      summed_log_prior1 <- samples$summed_log_prior[old.nmc,]
       samples$summed_log_prior <- array(-Inf,c(nmc,samples$n.chains))         
       samples$summed_log_prior[1,]  <- summed_log_prior1
 
+      log_likelihoods1  <- samples$log_likelihoods[old.nmc,]
       samples$log_likelihoods  <- array(-Inf,c(nmc,samples$n.chains))
       samples$log_likelihoods[1,]  <- log_likelihoods1
 
@@ -502,7 +466,7 @@ migrate <- function(use.theta,use.logprior,use.loglike,
 
 
 run.dmc <- function(samples,report=10,cores=1,p.migrate=0,
-  gamma.mult=2.38,farjump=NA,force=FALSE,verbose=TRUE)
+  gamma.mult=2.38,farjump=NA,force=FALSE)
   # Run sampling. 
   # Force is a boolean for each interation forcing acceptance (not used in lessions).
 {
@@ -600,14 +564,14 @@ run.dmc <- function(samples,report=10,cores=1,p.migrate=0,
 
     if (i %% samples$thin == 0) { # store samples
       store_i <- store_i + 1
-      if (verbose & (store_i %% report == 0)) cat(store_i," ")
+      if (store_i %% report == 0) cat(store_i," ")
       samples$summed_log_prior[store_i,]  <- use.logprior                                  
       samples$log_likelihoods[store_i,]   <- use.loglike
       samples$theta[,,store_i]            <- use.theta
     }
     
   }
-  if (verbose) cat("\n")
+  cat("\n")
   if (cores>1 & os == "windows") { sfStop() }
   samples
 }
@@ -630,21 +594,17 @@ get.dqp <- function(sim,facs,probs,n.post=NA,ns=NA,bw="nrd0") {
     n[is.na(n)] <- 0 # In case some cells are empty
     nok <- tapply(sim$RT,sim[,c(facs,"R")],function(x){sum(!is.na(x))})
     nok[is.na(nok)] <- 0 # In case some cells are empty
-    if ( is.null(facs) ) np <- sum(n) else
+    if (is.null(facs)) np <- sum(n) else
       np <- rep(apply(n,1:length(facs),sum),times=length(levels(sim$R)))
     p <- nok/np
-    # p.all <- n/np
 
     # For a simulation get probability replicates
     if ( !is.na(n.post) && (n.post>1) ) { 
       repfac <- rep(1:n.post,each=sum(ns))
-      # ns <- tapply(sim$RT,cbind(sim[,c(facs,"R"),drop=FALSE],rep=repfac),length)
-      # ns[is.na(ns)] <- 0 # In case some cells are empty
       ps <- tapply(sim$RT,cbind(sim[,c(facs,"R"),drop=FALSE],rep=repfac),
         function(x){sum(!is.na(x))})
       ps[is.na(ps)] <- 0 # In case some cells are empty
       ps <- n.post*ps/np  
-      # ps.all <- n.post*ns/np  
     } else ps=NULL
 
     # cell names
@@ -683,7 +643,7 @@ get.dqp <- function(sim,facs,probs,n.post=NA,ns=NA,bw="nrd0") {
       qs <- array(qs,dim=c(length(qs)))
       dimnames(qs) <- dnq[-length(dnq)] 
     }
-    list(pdf=dens,cdf=qs,n=n,nok=nok,p=p,ps=ps) #,n=n,p.all,ps.all,ns=ns)
+    list(pdf=dens,cdf=qs,n=n,p=p,ps=ps)
 }
 
 
@@ -692,12 +652,10 @@ get.dqp <- function(sim,facs,probs,n.post=NA,ns=NA,bw="nrd0") {
 # bw="nrd0";report=10;save.simulation=FALSE; factors=NA
 # save.simulation.as.attribute=FALSE;ignore.R2=TRUE
 # gglist=FALSE; probs.gglist=c(0.1, 0.5, 0.9); CI.gglist=c(0.025, 0.975)
-#  censor=c(NA,NA)
-# samples=hsamples[[1]]; random=TRUE; n.post=2; gglist=TRUE; report=1
 
 post.predict.dmc <-function(samples,n.post=100,probs=c(1:99)/100,random=TRUE,
   bw="nrd0",report=10,save.simulation=FALSE,factors=NA,
-  save.simulation.as.attribute=FALSE,ignore.R2=FALSE,censor=c(NA,NA),
+  save.simulation.as.attribute=FALSE,ignore.R2=FALSE,
   gglist=FALSE, probs.gglist=c(0.1, 0.5, 0.9),CI.gglist=c(0.025, 0.975))
   # make list of posterior preditive density, quantiles and response p(robability)
   # NB: quantiles only calcualted for 2 or more RTs
@@ -735,7 +693,7 @@ post.predict.dmc <-function(samples,n.post=100,probs=c(1:99)/100,random=TRUE,
     leave.out <- -c(1:dim(samples$data)[2])[names(samples$data) %in% c("RT",names(cvs),"R2")]
   } else {
     # Assumes last two are SSD and RT! FIX ME. EG WONT WORK IF THERE ARE CVS
-    if ( is.null(facs) ) SSD <- samples$data$SSD else
+    if (is.null(facs)) SSD <- samples$data$SSD else
       SSD <- unlist(tapply(samples$data$SSD,samples$data[,facs],identity)) 
     leave.out <- -c((dim(samples$data)[2]-1):dim(samples$data)[2])
   }
@@ -751,21 +709,13 @@ post.predict.dmc <-function(samples,n.post=100,probs=c(1:99)/100,random=TRUE,
   }
   if ( any(names(sim)=="R2") ) { # MTR model
     sim$R <- paste(as.character(sim$R),as.character(sim$R2),sep="") 
-    if (attributes(model)$type=="normDK") sim$R[sim$R2=="2"] <- "DK"
+    sim$R[sim$R2=="DK"] <- "DK"
     sim$R <- factor(sim$R)
     samples$data$R <- paste(as.character(samples$data$R),as.character(samples$data$R2),sep="") 
-    if (attributes(model)$type=="normDK") 
-      samples$data$R[samples$data$R2=="2"] <- "DK"
+    samples$data$R[samples$data$R2=="DK"] <- "DK"
     samples$data$R <- factor(samples$data$R)
   }
   reps <- rep(1:n.post,each=dim(samples$data)[1])
-  
-  if (!is.na(censor[1])) fast <- sim[,"RT"] < censor[1] else fast <- rep(FALSE,dim(sim)[1])
-  if (!is.na(censor[2])) slow <- sim[,"RT"] > censor[2] else slow <- rep(FALSE,dim(sim)[1])
-  ok <- !fast & !slow 
-  sim <- sim[ok,]
-  reps <- reps[ok]
-  
   if ( save.simulation ) {
     sim <- cbind(reps,sim)
     attr(sim,"data") <- samples$data
@@ -784,7 +734,7 @@ post.predict.dmc <-function(samples,n.post=100,probs=c(1:99)/100,random=TRUE,
     if (save.simulation.as.attribute) 
       attr(out,"sim") <- cbind(reps,sim)
     if (gglist) attr(out, "gglist") <- 
-      get.fitgglist.dmc(sim=cbind(reps,sim),data=samples$data,factors=factors, noR=FALSE, 
+      get.fitgglist.dmc(cbind(reps,sim),samples$data,factors=factors, noR=FALSE, 
         quantiles.to.get= probs.gglist, CI = CI.gglist)
     out
   }
@@ -894,28 +844,29 @@ run.converge.dmc <- function(samples,nmc,report=10,cores=1,gamma.mult=2.38,
 }
 
 
-# cores=1;p.migrate=.05;report=10;verbose=FALSE;split=TRUE; force=FALSE
+# cores=1;p.migrate=.05;report=10;verbose=FALSE;split=TRUE
 # gamma.mult=2.38;minN=NA;meanN=NA;cut.unstuck=10;cut.converge=1.1;
-# cut.flat.location=1/2;cut.flat.scale=1/2;max.try=100; n.add=NA
+# cut.flat.location=1/2;cut.flat.scale=1/2;max.try=100
+# 
+# n.add=50; minN=2000
 
 RUN.dmc <- function(samples,cores=1,report=10,p.migrate=.05,max.try=20,
   cut.unstuck=10,
   cut.flat.location=1/2,cut.flat.scale=1/2,
   cut.converge=1.1,split=TRUE,
-  minN=NA,meanN=NA,use.effectiveSize = TRUE,
+  minN=NA,meanN=NA,
   n.add=NA,force=FALSE,
   verbose=FALSE,gamma.mult=2.38)
   
 {
 
-  StuckTests <- function(samples,verbose=FALSE,cut) {
-    if (verbose) cat("Stuck chains check\n") 
+  StuckTests <- function(samples,verbose,cut) {
+    cat("Stuck chains check")
+    if (verbose) cat("\n") 
     stucks <- pick.stuck.dmc(samples,cut=cut,verbose=verbose)
     fail <- length( stucks != 0)
-    if (verbose) {
-      if (!fail) cat(": OK\n") else
+    if (!verbose) if (!fail) cat(": OK\n") else
       cat(paste(":",length(stucks),"\n")) 
-    }
     fail
   }
 
@@ -951,47 +902,41 @@ RUN.dmc <- function(samples,cores=1,report=10,p.migrate=.05,max.try=20,
         paste(out,names(s.zs)[s.zs==max(s.zs)],"=",round(max(s.zs),2))
       fail <- fail | any(s.zs>cut.scale) 
     } 
+    cat("Flat check")
     if (verbose) {
-      cat("Flat check\n")
+      cat("\n")
       print(round(m.zs,2))
-      if ( is.finite(cut.scale) ) 
-        print(round(s.zs,2)) else 
-          if (!fail) cat(": OK\n") else 
-            cat(paste(":",out,"\n"))
+      if ( is.finite(cut.scale) ) print(round(s.zs,2))
+    } else if (!fail) cat(": OK\n") else {
+      cat(paste(":",out,"\n"))
     }
     fail
   }
 
-  MixTests <- function(samples,verbose=FALSE,cut,split=TRUE) {
+  MixTests <- function(samples,verbose,cut,split=TRUE) {
     tmp <- gelman.diag.dmc(samples,split=split)
     gds <- c(tmp$mpsrf,tmp$psrf[,1])
     fail <- max(gds) > cut
+    cat("Mixing check")
     if (verbose) {
-      cat("Mixing check\n")
+      cat("\n")
       print(round(gds,2))
-      if (!fail) cat(": OK\n") else {
-        nam <- names(gds)[gds==max(gds)]
-        cat(paste(":",nam,"=",round(max(gds),2),"\n"))
-      }
+    } else if (!fail) cat(": OK\n") else {
+      nam <- names(gds)[gds==max(gds)]
+      cat(paste(":",nam,"=",round(max(gds),2),"\n"))
     }
     fail
   }
   
-  LengthTests <- function(samples,minN,nfun,verbose=FALSE) {
-    n <- do.call(nfun,list(get.size(samples)))
+  LengthTests <- function(samples,minN,nfun) {
+    n <- do.call(nfun,list(effectiveSize.dmc(samples)))
     fail <- n < minN
-    if (verbose) { 
-      cat("Length check")
-      if (!fail) cat(": OK\n") else cat(paste(":",n,"\n"))  
-    }
+    cat("Length check")
+    if (!fail) cat(": OK\n") else cat(paste(":",n,"\n"))  
     fail
   }
 
-  if (!verbose) report <- 1e8
-  
-  if (use.effectiveSize) get.size <- effectiveSize.dmc else
-    get.size <- function(x){prod(dim(x$theta)[-2])}
-  
+
   if ( !is.na(minN) & !is.na(meanN) ) {
     warning("Both minN and meanN specified, using minN")
     meanN <- NA 
@@ -1010,13 +955,12 @@ RUN.dmc <- function(samples,cores=1,report=10,p.migrate=.05,max.try=20,
   
   if ( any(!is.finite(samples$log_likelihoods[samples$nmc,])) ) { # New samples
     do.migrate=1
-    if (verbose) cat("\nGetting initial set of samples\n")
-    samples <- run.dmc(samples,report=report,verbose=verbose,
+    cat("\nGetting initial set of samples\n")
+    samples <- run.dmc(samples,report=report,
       cores=cores,p.migrate=p.migrate,gamma.mult=gamma.mult)
   } else do.migrate=0 # Samples already good, just want more.
 
-  if ( !force && !is.null(attr(samples,"auto")) && 
-       !is.na(attr(samples,"auto")) && attr(samples,"auto")!="GRID FAIL" )
+  if (!force && !is.null(attr(samples,"auto")) && (attr(samples,"auto")!="GRID FAIL") )
     return(samples) # If already sucessfully run then dont run again unless force=TRUE
   n.try <- 0
   repeat {
@@ -1034,7 +978,7 @@ RUN.dmc <- function(samples,cores=1,report=10,p.migrate=.05,max.try=20,
     if ( !get.new && any(FlatTests(samples,verbose=verbose,
       cut.location=cut.flat.location,cut.scale=cut.flat.scale)) ) 
     { # remove first 1/3, add new 1/3
-      if (verbose) cat("Removing initial 1/3 of samples\n")
+      cat("Removing initial 1/3 of samples\n")
       nshift <- ceiling(samples$nmc/3)
       samples <- samples.dmc(samples=samples,remove=1:nshift,nmc=0,add=TRUE)  
       samples <- samples.dmc(samples=samples,add=TRUE,nmc=n)
@@ -1054,7 +998,7 @@ RUN.dmc <- function(samples,cores=1,report=10,p.migrate=.05,max.try=20,
     
     # Length check
     if ( (!get.new & !test.again) && ( !is.na(minN) && 
-        LengthTests(samples,minN=minN,nfun=nfun,verbose=verbose)) ) { # Not long enough
+        LengthTests(samples,minN=minN,nfun=nfun)) ) { # Not long enough
         samples <- samples.dmc(samples=samples,nmc=n,add=TRUE)
         test.again <- TRUE
         get.new <- FALSE
@@ -1063,17 +1007,17 @@ RUN.dmc <- function(samples,cores=1,report=10,p.migrate=.05,max.try=20,
     # Sucess?
     if ( !get.new & !test.again ) {
       outcome <- "SUCESS"
-      if (verbose) cat(paste("\nOUTCOME:",outcome,"AFTER TRY",n.try,"\n"))
+      cat(paste("\nOUTCOME:",outcome,"AFTER TRY",n.try,"\n"))
       break
     }
     # GET MORE SAMPLES
     if ( get.new ) { # Stuck chains, start again
-      if (verbose) cat("Getting new set of samples\n")
+      cat("Getting new set of samples\n")
       samples <- run.dmc(samples.dmc(samples=samples,nmc=3*n,thin=samples$thin),
-        report=report,cores=cores,p.migrate=p.migrate,gamma.mult=gamma.mult,verbose=verbose)
+        report=report,cores=cores,p.migrate=p.migrate,gamma.mult=gamma.mult)
     } else {         # Test failed, update
-      if (verbose) cat("Adding extra samples\n")
-      samples <- run.dmc(samples,report=report,verbose=verbose,
+      cat("Adding extra samples\n")
+      samples <- run.dmc(samples,report=report,
         cores=cores,p.migrate=p.migrate*do.migrate,gamma.mult=gamma.mult)
     }
     
@@ -1081,16 +1025,14 @@ RUN.dmc <- function(samples,cores=1,report=10,p.migrate=.05,max.try=20,
     n.try <- n.try + 1
     if ( (n.try > max.try) ) {
       outcome <- "FAIL"
-      if (verbose) cat(paste("\nOUTCOME:",outcome,"AFTER TRY",n.try,"\n"))
+      cat(paste("\nOUTCOME:",outcome,"AFTER TRY",n.try,"\n"))
       break 
-    } else if (verbose) cat(paste("COMPLETED TRY",n.try,"\n\n"))
+    } else cat(paste("COMPLETED TRY",n.try,"\n\n"))
   }
   if (outcome=="FAIL") attr(samples,"auto") <- NA else
     attr(samples,"auto") <- n.try
   samples
 }
-
-
 
 get.p.vector <- function(x,value=1){
   # Convenience function to get a named p.vector from a fit object

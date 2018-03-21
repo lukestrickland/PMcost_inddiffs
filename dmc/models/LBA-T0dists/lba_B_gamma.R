@@ -5,6 +5,8 @@
 # User edited funcitons for the DMC (Dynamic Models of Choice)
 #    Source in all appliciatons
 
+source("rtdists_extras.R")
+
 # This function transfroms parameters to a form suitbale for the model 
 #   being used. Called inside of get.par.mat. 
 # "par.df" is a data frame of parameters types , some of which may need to be 
