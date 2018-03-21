@@ -68,23 +68,20 @@ dists=rep("tnorm",length(p1)),
 lower= rep(0, length(p1)), upper= rep(Inf, length(p1))
 )
 pp.prior=list(p.prior,s.prior)
-# hstart <- make.hstart(B_samples)
-# theta1 <- make.theta1(B_samples)
-# h_B_samples <- h.samples.dmc(nmc=180,p.prior,dm,pp.prior,
-#    hstart.prior=hstart,theta1=theta1,thin=1)
+hstart <- make.hstart(B_samples)
+theta1 <- make.theta1(B_samples)
+h_B_samples <- h.samples.dmc(nmc=60,p.prior,dm,pp.prior,
+   hstart.prior=hstart,theta1=theta1,thin=20)
 
 ##Request all the cores available on cl2
 cores=80
 
-# save(h_B_samples, file="samples/startpoints_h_B_LBA.RData")
+save(h_B_samples, file="samples/startpoints_h_B_LBA.RData")
 load("samples/startpoints_h_B_LBA.RData")
 
 #Firstly start the sampling to look for 'stuck' chains- chains that run off
 #and get stuck in unlikely regions
 # #Note run.unstuck does not give you your valid final samples (p.migrate is on)
 # #you have to run without it after
-load("~/proactive_ids/samples/h_B_LBA.RData")
-h_B_samples  <- h.RUN.dmc(
-  h.samples.dmc(samples=h_B_samples, nmc=60, thin=20, p.prior=p.prior, pp.prior=pp.prior)
-  , cores = cores, max.try=15)
+h_B_samples  <- h.RUN.dmc(h_B_samples, cores = cores, max.try=15)
 save(h_B_samples,file="samples/h_B_LBA.RData")
