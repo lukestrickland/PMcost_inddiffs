@@ -1,4 +1,3 @@
-# System functions for the DMC (Dynamic Models of Choice)
 #    Usually user does not need to edit
 
 make.level.array <- function(factors=list(S=c("s1","s2")))
@@ -20,12 +19,14 @@ make.level.array <- function(factors=list(S=c("s1","s2")))
 # responses2=NULL;match.map=NULL;constants=numeric(0)
 # type="norm";posdrift=TRUE;verbose=TRUE;check.model=TRUE
 # 
-#   factors=list(RS=c("Rr","Gr","Br"),IS=c("ri","gi","bi"))
-#   responses=c("red","green","blue")
-#   p.map=list(A="1",B="1",t0="1",mean_v="RI",sd_v="1",st0="1")
-#   match.map=list(M=list(Rr="red",Gr="green",Br="blue"),RI=map)
-#   constants=c(sd_v=1,st0=0)
-  
+# p.map = list(A="1",B="R",t0="1",st0="1",
+#                                 v0="1",sv0="1",ds="1",ss="1",g="1") 
+#           factors=list(F=c("base","mult","add"),S=c("left","right"))
+#           cvs=c("LS","RS")
+#           constants = c(st0=0) 
+#           responses = c("LEFT","RIGHT")
+#           type="lnorm"
+
 model.dmc <- function(
   p.map,                        # list factors and constants for parameters
   responses,                    # Response (accumulator) names
@@ -134,11 +135,11 @@ model.dmc <- function(
   factors$R <- responses
   if (!is.null(match.map)) factors$M <- c("true","false")
   
-  # protect againt grep problems
-  for (i in unlist(factors)) if ( length(grep(i,unlist(factors)))!=1 )
-    stop("Factor, response or map level is not unique or is substring of another 
-         level or of \"true\" or \"false\"!" )
-  
+#   # protect againt grep problems
+#   for (i in unlist(factors)) if ( length(grep(i,unlist(factors)))!=1 )
+#     stop("Factor, response or map level is not unique or is substring of another 
+#          level or of \"true\" or \"false\"!" )
+#   
   # Add in extra match.map factors (if any)
   if ( !is.null(match.map) ) for (i in map.names)
     factors[[i]] <- levels(match.map[[i]])
@@ -710,8 +711,8 @@ data.model.dmc <- function(data,model,n.pda=1e4,report=Inf)
     stop(paste("data must have columns named:",
                paste(fnams,collapse=" "),"R","RT"))
   for ( i in names(attr(modeli,"factors")) )
-    if ( !all(attr(modeli,"factors")[[i]] == levels(data[,i])) ) 
-      stop(paste("Factor",i,"must have these levels in this order:",
+    if ( !all(sort(attr(modeli,"factors")[[i]]) == sort(levels(data[,i]))) ) 
+      stop(paste("Factor",i,"must have levels:",
                  paste(attr(model,"factors")[[i]],collapse=" ")))
   if ( !all(sort(attr(modeli,"responses")) == sort(levels(data[,"R"]))) ) 
     stop(paste("data$R must have levels:",
@@ -756,7 +757,6 @@ data.model.dmc <- function(data,model,n.pda=1e4,report=Inf)
           bounds[attr(data[[s]],"cell.index")[[i]]] <- attr(modeli,"bound")[i]
         attr(data[[s]],"bounds") <- bounds  
       }
-      attr(data[[s]],"n.pda") <- n.pda
       ss <- ss+1
       if (is.finite(report) && (ss %% report == 0)) cat(".")
     }
@@ -781,8 +781,8 @@ data.model.dmc <- function(data,model,n.pda=1e4,report=Inf)
         bounds[attr(data,"cell.index")[[i]]] <- attr(model,"bound")[i]
       attr(data,"bounds") <- bounds  
     }
-    attr(data,"n.pda") <- n.pda
   }
+  attr(data,"n.pda") <- n.pda
   data 
 }
 
@@ -804,7 +804,7 @@ data.model.cvs.dmc <- function(p.vector,model,data,factor.names,cv.names,n.pda=1
 
 
 
-######### CUSTOM MAP MAKING ----
+######### CUSTOM MAP MAKING
 
 empty.map <- function(FR,levels)
 {
@@ -814,20 +814,19 @@ empty.map <- function(FR,levels)
   factor(map,levels=levels)
 }
 
-# include=NA;match.values=NA
-# value="rm";eq.list=list(c(1,3));funs=funs[-2]
+
 assign.map <- function(map,value="",eq.list=list(),
                        funs=NULL,include=NA,match.values=NA)
 {
   
-  if ( any(is.na(include)) ) ok <- rep(TRUE,length(map)) else 
+  if (any(is.na(include))) ok <- rep(TRUE,length(map)) else 
   {
     ok <- grepl(include[1],names(map))
     if (length(include)>1) for (i in 2:length(include))
       ok <- ok | grepl(include[i],names(map)) 
   }
   if ( length(eq.list)==0 ) # Fill in empty elements if included
-    map[is.na(map) & ok] <- value else if ( all(unlist(lapply(eq.list,length))==1) )
+    map[is.na(map) & ok] <- value else if (all(unlist(lapply(eq.list,length))==1))
     {
       if (all(is.na(match.values)) || length(match.values)!=length(eq.list))
         stop("If eq.list only has length one entries match.value must contain target for each entry")
